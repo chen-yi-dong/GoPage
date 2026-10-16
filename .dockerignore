@@ -1,26 +1,6 @@
-# 持久化数据不进镜像（运行时通过 volume 挂载）
-data/
+# 构建镜像时忽略：本地运行数据、Python 缓存、版本库
+**/__pycache__/
+**/*.py[cod]
 backend/data/
-
-# Python 缓存
-__pycache__/
-*.pyc
-*.pyo
-.venv/
-venv/
-
-# 前端依赖与构建缓存（前端为纯静态，无需 node_modules）
-node_modules/
-
-# 旧版遗留文件
-backend/navigation.json
-backend/users.json
-backend/settings.json
-backend/sessions.json
-
-# 版本控制与杂项
 .git/
 .gitignore
-*.log
-.DS_Store
-README.md

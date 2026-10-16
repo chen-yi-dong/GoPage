@@ -322,7 +322,10 @@
         </div>
     </div>
 
+    <!-- 图标数据：经典脚本，先于模块脚本执行，提供 window.FA_ICONS -->
     <script src="./assets/icons.js"></script>
-    <script src="./app.js?v=1.0.13"></script>
+    <!-- 入口模块：ES Module，浏览器原生支持、无需构建；
+         type="module" 自带 defer 语义，执行时 DOM 已就绪 -->
+    <script type="module" src="./js/main.js?v=1.0.13"></script>
 </body>
 </html>

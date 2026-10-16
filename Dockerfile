@@ -17,10 +17,11 @@ WORKDIR /app
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
-# 后端代码
+# 后端代码：入口 app.py + navcenter 包（见 backend/navcenter/ 各模块）
 COPY backend/app.py ./app.py
+COPY backend/navcenter ./navcenter
 
-# 前端静态资源（含 Font Awesome 字体、图标数据、样式与脚本）
+# 前端静态资源（含 Font Awesome 字体、图标数据、样式与 ES Module 脚本）
 COPY frontend/ ./frontend/
 
 # 数据目录（运行时通过 volume 挂载持久化）
