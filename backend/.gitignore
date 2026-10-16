@@ -1,0 +1,19 @@
+# 持久化数据目录（含账号与密码摘要，禁止提交到仓库）
+data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 旧版遗留文件（已迁移到 data/）
+navigation.json
+users.json
+settings.json
+sessions.json
+
+# 其它
+*.log
+.DS_Store

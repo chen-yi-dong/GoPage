@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人导航中心</title>
+    <!-- 版本参数用于在更换图标后强制浏览器拉取新文件（浏览器对 favicon 缓存非常顽固） -->
+    <link rel="icon" type="image/x-icon" href="./assets/favicon.ico?v=1.0.13">
+    <!-- 图标字体（Font Awesome Free 6.7.2）与全站通用样式 -->
+    <link rel="stylesheet" href="./assets/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+    <div class="loading-container" id="loading"><i class="fas fa-spinner fa-spin fa-3x" style="color: white;"></i></div>
+
+    <!-- 背景遮罩：压暗过亮的自定义背景，保证任意背景下白色文字可读 -->
+    <div class="bg-scrim" id="bgScrim"></div>
+    
+    <!-- 顶栏：右上角悬浮操作胶囊（编辑 / 保存 / 设置），品牌只保留中间大标题 -->
+    <nav class="topbar">
+        <button type="button" class="btn primary" id="addSectionBtn" style="display:none;"><i class="fas fa-folder-plus"></i> 新增分组</button>
+        <button type="button" class="btn primary" id="saveBtn" style="display:none;"><i class="fas fa-floppy-disk"></i> 保存更改</button>
+        <button type="button" class="btn" id="editToggle"><i class="fas fa-pen"></i> 编辑模式</button>
+        <button type="button" class="btn btn-icon" id="settingsBtn" title="设置" aria-label="设置"><i class="fas fa-gear"></i></button>
+    </nav>
+
+    <div class="container" id="mainContainer">
+        <header class="header">
+            <h1>个人导航中心</h1>
+            <p>常用站点，一键直达</p>
+        </header>
+
+        <!-- 双搜索框：上网搜索（可切换引擎） + 站内服务过滤 -->
+        <div class="search-stack">
+            <div class="web-search" id="webSearchBox">
+                <button type="button" class="engine-chip" id="engineChip" title="切换搜索引擎">
+                    <i class="fab fa-microsoft" id="engineIcon"></i>
+                    <span id="engineName">Bing</span>
+                    <i class="fas fa-chevron-down engine-caret"></i>
+                </button>
+                <input type="text" id="webSearchInput" class="web-search-input" placeholder="搜索网页…" autocomplete="off">
+                <button type="button" class="web-search-go" id="webSearchGo" title="搜索" aria-label="搜索">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                <!-- 搜索引擎下拉菜单 -->
+                <div class="engine-menu" id="engineMenu"></div>
+            </div>
+
+            <div class="service-search" id="serviceSearchBox">
+                <i class="fas fa-magnifying-glass service-search-icon"></i>
+                <input type="text" id="searchInput" placeholder="搜索已收录的服务…" autocomplete="off">
+            </div>
+        </div>
+
+        <div id="content"></div>
+        <div class="no-results" id="noResults">未找到匹配的服务</div>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div class="modal-mask" id="editModal">
+        <div class="modal">
+            <h3 id="modalTitle">编辑</h3>
+            <!-- 使用 novalidate：必填校验由脚本统一处理，
+                 避免隐藏的 required 字段（如新增分组时的「链接地址」）
+                 被浏览器拦下、导致表单无法提交 -->
+            <form id="editForm" novalidate>
+                <div class="form-group" id="nameGroup">
+                    <label for="fieldName">名称</label>
+                    <input type="text" id="fieldName" required>
+                </div>
+                <div class="form-group" id="urlGroup">
+                    <label for="fieldUrl">链接地址</label>
+                    <input type="text" id="fieldUrl" placeholder="https://example.com" required>
+                </div>
+                <div class="form-group" id="iconGroup">
+                    <label for="fieldIcon">图标 class（Font Awesome）</label>
+                    <div class="input-with-action">
+                        <input type="text" id="fieldIcon" placeholder="fa fa-search">
+                        <button type="button" class="btn" id="browseIconsBtn"><i class="fas fa-images"></i> 浏览图标</button>
+                    </div>
+                    <div class="icon-preview" id="iconPreview"></div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" id="modalCancel">取消</button>
+                    <button type="submit" class="btn primary" id="modalSubmit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 图标选择器 -->
+    <div class="icon-picker-mask" id="iconPickerMask">
+        <div class="icon-picker" role="dialog" aria-modal="true" aria-labelledby="iconPickerTitle">
+            <div class="icon-picker-head">
+                <h3 id="iconPickerTitle">
+                    <i class="fas fa-icons"></i> 选择图标
+                    <span class="muted" id="iconPickerCount"></span>
+                </h3>
+                <div class="icon-search-row">
+                    <input type="text" id="iconSearchInput" placeholder="输入中文或英文关键词搜索，例如：首页 / 设置 / 服务器 / 下载">
+                    <button type="button" class="btn" id="iconSearchClear"><i class="fas fa-xmark"></i> 清空</button>
+                </div>
+            </div>
+            <div class="icon-picker-body">
+                <div class="icon-grid" id="iconGrid"></div>
+                <div class="icon-empty" id="iconEmpty" style="display:none;">没有找到匹配的图标，换个关键词试试</div>
+            </div>
+            <div class="icon-picker-foot">
+                <div class="current">
+                    <span>当前选择：</span>
+                    <span class="glyph" id="iconPickerCurrent"><i class="fas fa-link"></i></span>
+                    <code id="iconPickerCurrentName">fa fa-link</code>
+                </div>
+                <div class="actions">
+                    <button type="button" class="btn" id="iconPickerClear">清除</button>
+                    <button type="button" class="btn" id="iconPickerCancel">取消</button>
+                    <button type="button" class="btn primary" id="iconPickerConfirm">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 登录页（未登录时整页显示，登录成功后隐藏） -->
+    <div class="login-page" id="loginPage">
+        <div class="login-card">
+            <div class="login-brand">
+                <i class="fas fa-compass"></i>
+                <h1>个人导航中心</h1>
+                <p>请登录后继续</p>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUser">用户名</label>
+                    <input type="text" id="loginUser" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPass">密码</label>
+                    <input type="password" id="loginPass" autocomplete="current-password" required>
+                </div>
+                <div class="form-hint" id="loginHint"></div>
+                <div class="login-actions">
+                    <button type="submit" class="btn primary" id="loginSubmit">
+                        <i class="fas fa-right-to-bracket"></i> 登录
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- 设置弹窗 -->
+    <div class="modal-mask" id="settingsModal">
+        <div class="modal modal-lg">
+            <div class="settings-head">
+                <h3><i class="fas fa-gear"></i> 设置</h3>
+                <button type="button" class="icon-btn" id="settingsClose" title="关闭"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="settings-tabs" id="settingsTabs">
+                <button type="button" class="settings-tab active" data-tab="basic"><i class="fas fa-sliders"></i> 基础设置</button>
+                <button type="button" class="settings-tab" data-tab="accounts"><i class="fas fa-users"></i> 账号管理</button>
+                <button type="button" class="settings-tab" data-tab="about"><i class="fas fa-circle-info"></i> 关于</button>
+            </div>
+
+            <!-- 基础设置 -->
+            <div class="settings-body" data-panel="basic">
+                <div class="settings-section">
+                    <div class="settings-row">
+                        <div class="settings-label">
+                            <strong>启用登录验证</strong>
+                            <span class="settings-desc" id="loginRequiredDesc">开启后访问需登录；关闭后按公共配置使用</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="loginRequiredToggle">
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-desc settings-desc-block" id="loginRequiredNote"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h4>主页背景</h4>
+                    <div class="settings-desc">每个账号单独设置，仅影响你自己的界面</div>
+                    <div class="bg-type-row">
+                        <label class="radio"><input type="radio" name="bgType" value="default"> <span>默认渐变</span></label>
+                        <label class="radio"><input type="radio" name="bgType" value="color"> <span>纯色</span></label>
+                        <label class="radio"><input type="radio" name="bgType" value="image"> <span>图片</span></label>
+                    </div>
+                    <div class="bg-value-row" id="bgColorRow" style="display:none;">
+                        <label for="bgColor">选择颜色</label>
+                        <input type="color" id="bgColor" value="#2C3E50">
+                        <input type="text" id="bgColorText" placeholder="#2C3E50" maxlength="7">
+                    </div>
+                    <div class="bg-value-row" id="bgImageRow" style="display:none;">
+                        <label for="bgImage">图片地址</label>
+                        <input type="text" id="bgImage" placeholder="https://example.com/bg.jpg 或 ./assets/bg.jpg">
+                    </div>
+                    <div class="bg-preview" id="bgPreview"></div>
+                    <div class="scrim-row">
+                        <label for="bgScrimRange">背景遮罩（亮色背景下提升文字可读性）</label>
+                        <div class="scrim-control">
+                            <input type="range" id="bgScrimRange" min="0" max="80" step="5" value="30">
+                            <span class="scrim-value" id="bgScrimValue">30%</span>
+                        </div>
+                        <label class="checkbox scrim-panel-toggle">
+                            <input type="checkbox" id="scrimPanelToggle" checked>
+                            <span>内容面板跟随联动（卡片 / 搜索框 / 顶栏随遮罩一起加深，关闭后保持基础浓度）</span>
+                        </label>
+                    </div>
+                    <div class="settings-actions">
+                        <button type="button" class="btn primary" id="bgSaveBtn"><i class="fas fa-floppy-disk"></i> 保存背景</button>
+                        <button type="button" class="btn" id="bgResetBtn"><i class="fas fa-rotate-left"></i> 恢复默认</button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4>搜索引擎</h4>
+                    <div class="settings-desc">主页顶部搜索框使用的引擎；地址中的 {kw} 会被替换为搜索关键词</div>
+                    <div class="engine-list" id="engineList"></div>
+                    <div class="engine-add-row">
+                        <input type="text" id="newEngineName" placeholder="名称，如：百度" maxlength="20">
+                        <input type="text" id="newEngineUrl" placeholder="https://www.baidu.com/s?wd={kw}">
+                        <button type="button" class="btn primary" id="addEngineBtn"><i class="fas fa-plus"></i> 添加</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 账号管理 -->
+            <div class="settings-body" data-panel="accounts" style="display:none;">
+                <div class="settings-actions" id="userToolbar">
+                    <button type="button" class="btn primary" id="addUserBtn"><i class="fas fa-user-plus"></i> 新增账号</button>
+                    <span class="settings-desc" id="userListHint"></span>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>角色</th>
+                                <th>创建时间</th>
+                                <th class="col-actions">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 关于 -->
+            <div class="settings-body" data-panel="about" style="display:none;">
+                <div class="about-card">
+                    <div class="about-logo"><i class="fas fa-compass"></i></div>
+                    <div class="about-name">个人导航中心</div>
+                    <div class="about-meta">
+                        <div><span>版本</span><strong id="aboutVersion">-</strong></div>
+                        <div><span>发布日期</span><strong id="aboutDate">-</strong></div>
+                        <div><span>当前账号</span><strong id="aboutUser">-</strong></div>
+                    </div>
+                </div>
+
+                <div class="settings-section danger-zone">
+                    <h4><i class="fas fa-triangle-exclamation"></i> 清空数据</h4>
+                    <div class="settings-desc">
+                        管理员：保留账号，仅清空导航数据与背景设置。<br>
+                        普通用户：清除与自己相关的全部数据（含账号）。
+                    </div>
+                    <div class="settings-actions">
+                        <button type="button" class="btn danger" id="clearDataBtn"><i class="fas fa-trash"></i> 清空数据</button>
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button type="button" class="btn" id="logoutBtn"><i class="fas fa-right-from-bracket"></i> 退出登录</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 账号编辑弹窗 -->
+    <div class="modal-mask" id="userModal">
+        <div class="modal modal-sm">
+            <h3 id="userModalTitle">新增账号</h3>
+            <form id="userForm">
+                <div class="form-group" id="userNameGroup">
+                    <label for="userName">用户名</label>
+                    <input type="text" id="userName" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label for="userPass">密码 <span class="hint-inline" id="userPassHint">（至少 6 位）</span></label>
+                    <input type="password" id="userPass" autocomplete="new-password">
+                </div>
+                <div class="form-group" id="userAdminGroup">
+                    <label class="checkbox"><input type="checkbox" id="userIsAdmin"> <span>设为管理员</span></label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" id="userModalCancel">取消</button>
+                    <button type="submit" class="btn primary" id="userModalSubmit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 清空数据弹窗（二次确认） -->
+    <div class="modal-mask" id="clearModal">
+        <div class="modal modal-sm">
+            <h3 class="danger-text"><i class="fas fa-triangle-exclamation"></i> 清空数据</h3>
+            <div class="settings-desc" id="clearWarn"></div>
+            <form id="clearForm">
+                <div class="form-group">
+                    <label for="clearUser">请输入你的用户名</label>
+                    <input type="text" id="clearUser" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label for="clearPass">请输入你的密码</label>
+                    <input type="password" id="clearPass" autocomplete="current-password" required>
+                </div>
+                <div class="form-hint" id="clearHint"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" id="clearCancel">取消</button>
+                    <button type="submit" class="btn danger" id="clearSubmit">确认清空</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="./assets/icons.js"></script>
+    <script src="./app.js?v=1.0.13"></script>
+</body>
+</html>

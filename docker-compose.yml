@@ -1,0 +1,26 @@
+services:
+  nav:
+    build: .
+    image: personal-nav:1.0.0
+    container_name: personal-nav
+    restart: unless-stopped
+    ports:
+      # 左侧为宿主机端口，可按需修改，例如 "8080:5000"
+      - "5000:5000"
+    environment:
+      TZ: Asia/Shanghai
+      NAV_DATA_DIR: /app/data
+      NAV_FRONTEND_DIR: /app/frontend
+    volumes:
+      # 关键：持久化数据挂载到宿主机，容器重建 / 镜像升级都不会丢数据
+      # 保存内容：users.json / settings.json / sessions.json
+      #           nav/<用户名>.json（每个账号的导航配置）
+      #           nav/_public.json（免登录模式使用的公共配置，独立于任何账号）
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:5000/api/meta')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+      
