@@ -2,6 +2,9 @@ services:
   nav:
     build: .
     image: personal-nav:1.0.0
+    # 想直接用 GitHub Actions 自动构建好的镜像（不用本地构建）时，
+    # 把上面两行注释掉，改用下面这行：
+    # image: ghcr.io/chen-yi-dong/gopage:latest
     container_name: personal-nav
     restart: unless-stopped
     ports:

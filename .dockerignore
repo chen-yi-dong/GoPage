@@ -1,6 +1,7 @@
-# 构建镜像时忽略：本地运行数据、Python 缓存、版本库
+# 构建镜像时忽略：本地运行数据、Python 缓存、版本库、遗留的 npm 依赖
 **/__pycache__/
 **/*.py[cod]
 backend/data/
+frontend/node_modules/
 .git/
 .gitignore

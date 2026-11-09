@@ -1,0 +1,16 @@
+# 运行数据（含账号与密码摘要，禁止提交；Docker 挂载到宿主机的 data/）
+data/
+
+# Node 依赖（前端无 npm 工程；frontend/node_modules 是构建期工具遗留，不再纳入版本管理）
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 日志与系统文件
+*.log
+.DS_Store

@@ -1,5 +1,7 @@
 # 个人导航中心（GoPage）
 
+![Docker Build](https://github.com/chen-yi-dong/GoPage/actions/workflows/docker-image.yml/badge.svg)
+
 一个前后端一体的个人导航页：多用户、登录鉴权、拖动排序、可换搜索引擎、每账号独立背景。
 后端 Flask + 前端原生 ES Module，**没有任何构建步骤**，clone 下来就能跑，适合阅读学习。
 
@@ -35,6 +37,46 @@ docker compose up -d --build
 
 数据持久化在 `./data`（users.json / settings.json / sessions.json / nav/*.json），
 容器重建、镜像升级都不丢数据。健康检查见 `docker-compose.yml`。
+
+### 使用自动构建的镜像（免本地构建）
+
+代码推送到 GitHub 后，Actions 会自动构建镜像并发布到 ghcr.io，
+服务器上无需 clone 代码、无需构建，直接拉镜像运行：
+
+```bash
+docker pull ghcr.io/chen-yi-dong/gopage:latest
+docker run -d --name personal-nav --restart unless-stopped \
+  -p 5000:5000 -v ./data:/app/data \
+  ghcr.io/chen-yi-dong/gopage:latest
+```
+
+也可以改 `docker-compose.yml`：把 `build: .` 和 `image: personal-nav:1.0.0`
+两行注释掉，改用 `image: ghcr.io/chen-yi-dong/gopage:latest`。
+
+## 自动构建与发布（GitHub Actions）
+
+工作流定义在 `.github/workflows/docker-image.yml`，**零配置**——
+推送即构建，使用 Actions 自带的 `GITHUB_TOKEN`，不需要配任何 Secret。
+
+| 触发方式 | 行为 | 产生的镜像标签 |
+| --- | --- | --- |
+| push 到 `main` | 构建 + 推送 | `latest`、`main`、`sha-xxxxxx` |
+| push tag（`v1.0.14`） | 构建 + 推送 | `1.0.14`、`1.0`、`sha-xxxxxx` |
+| Pull Request | 只构建不推送（验证 Dockerfile 没坏） | 无 |
+| Actions 页面手动 Run | 构建 + 推送 | 同上 |
+
+发布新版本的推荐流程：
+
+```bash
+git tag v1.0.14 && git push origin v1.0.14
+```
+
+镜像为多架构（`linux/amd64` + `linux/arm64`），x86 服务器、树莓派、
+ARM NAS（群晖等）都可以直接拉取。
+
+> **注意：ghcr.io 的包默认是私有。** 第一次构建完成后，到
+> Packages 页面（`github.com/users/chen-yi-dong/packages` 或仓库右侧 Packages）
+> 把 GoPage 的 Visibility 改成 **Public**，否则拉镜像需要先 `docker login ghcr.io`。
 
 ## 项目结构
 
@@ -80,7 +122,10 @@ GoPage/
 │   └── assets/                 # Font Awesome、style.css、icons.js（图标数据）
 ├── Dockerfile
 ├── docker-compose.yml
-└── .dockerignore
+├── .dockerignore
+└── .github/
+    └── workflows/
+        └── docker-image.yml   # GitHub Actions：推送自动构建多架构镜像
 ```
 
 ## 后端设计要点（适合学习的地方）
