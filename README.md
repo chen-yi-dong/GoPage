@@ -50,25 +50,27 @@ docker run -d --name personal-nav --restart unless-stopped \
   ghcr.io/chen-yi-dong/gopage:latest
 ```
 
-也可以改 `docker-compose.yml`：把 `build: .` 和 `image: personal-nav:1.0.0`
+也可以改 `docker-compose.yml`：把 `build: .` 和 `image: personal-nav`
 两行注释掉，改用 `image: ghcr.io/chen-yi-dong/gopage:latest`。
 
 ## 自动构建与发布（GitHub Actions）
 
 工作流定义在 `.github/workflows/docker-image.yml`，**零配置**——
 推送即构建，使用 Actions 自带的 `GITHUB_TOKEN`，不需要配任何 Secret。
+镜像标签来自 Git 分支 / tag / commit，不写在代码里；应用内显示的版本号只维护在
+`backend/navcenter/paths.py` 的 `APP_VERSION` 与 `APP_RELEASE_DATE`。
 
 | 触发方式 | 行为 | 产生的镜像标签 |
 | --- | --- | --- |
 | push 到 `main` | 构建 + 推送 | `latest`、`main`、`sha-xxxxxx` |
-| push tag（`v1.0.14`） | 构建 + 推送 | `1.0.14`、`1.0`、`sha-xxxxxx` |
+| push tag（`vX.Y.Z`） | 构建 + 推送 | `X.Y.Z`、`X.Y`、`sha-xxxxxx` |
 | Pull Request | 只构建不推送（验证 Dockerfile 没坏） | 无 |
 | Actions 页面手动 Run | 构建 + 推送 | 同上 |
 
-发布新版本的推荐流程：
+发布新版本的推荐流程（把 `X.Y.Z` 换成合法三段版本号，且与 `APP_VERSION` 保持一致）：
 
 ```bash
-git tag v1.0.14 && git push origin v1.0.14
+git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
 镜像为多架构（`linux/amd64` + `linux/arm64`），x86 服务器、树莓派、
