@@ -9,7 +9,7 @@
   routes_*.py    路由层：只负责把 HTTP 请求翻译成 services/security 调用
   bootstrap.py   启动初始化（直接运行与被 gunicorn 导入时都会执行）
 """
-from flask import Flask, redirect, request
+from flask import Flask, g, redirect, request
 from flask_cors import CORS
 
 from . import (
@@ -21,6 +21,7 @@ from . import (
     routes_settings,
     routes_users,
 )
+from .storage import DATA_LOCK
 
 
 def create_app():
@@ -29,6 +30,22 @@ def create_app():
 
     # 允许跨域：便于本地开发时前端独立运行；同源部署下不影响
     CORS(app)
+
+    # 数据全部以 JSON 文件持久化，setter 都是「读-改-写」且无事务：
+    # 用一把进程内锁把 /api 请求串行化，避免多线程并发写互相覆盖，
+    # 也避免 json.dump 遍历 SESSIONS 期间被其他线程修改。
+    # 静态资源请求不进 /api，不受影响。此锁依赖 --workers 1（单进程）。
+    @app.before_request
+    def lock_data_access():
+        if request.path.startswith('/api/'):
+            g._data_lock_held = True
+            DATA_LOCK.acquire()
+
+    @app.teardown_request
+    def unlock_data_access(_exc):
+        if getattr(g, '_data_lock_held', False):
+            g._data_lock_held = False
+            DATA_LOCK.release()
 
     # 重要：关闭 JSON 键排序，否则 jsonify 会按 Unicode 重新排列分组顺序，
     # 导致拖动排序保存后刷新页面分组顺序又被打乱

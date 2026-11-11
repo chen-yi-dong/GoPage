@@ -6,6 +6,12 @@
 """
 import json
 import os
+import threading
+import uuid
+
+# 单进程部署（gunicorn --workers 1 --threads 8）下所有请求线程共享的锁。
+# 由 create_app() 在每个 /api 请求开始时获取，保证「读-改-写」整体原子。
+DATA_LOCK = threading.RLock()
 
 
 def read_json(path, default=None):
@@ -22,7 +28,9 @@ def write_json(path, data):
     directory = os.path.dirname(path)
     if directory:
         os.makedirs(directory, exist_ok=True)
-    tmp_file = path + '.tmp'
+    # 临时文件名带随机后缀：避免并发写同一个 tmp 时内容互相覆盖，
+    # 或 os.replace 因 tmp 已被别的线程移走而抛 FileNotFoundError
+    tmp_file = f'{path}.{uuid.uuid4().hex}.tmp'
     with open(tmp_file, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
     os.replace(tmp_file, path)

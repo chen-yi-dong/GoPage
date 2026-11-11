@@ -128,13 +128,21 @@ def load_settings():
 
 
 def ensure_settings():
-    """用户级设置：每个账号一份（背景由账号维度存，登录开关是全局的）"""
+    """补全旧数据缺失的字段；只有确实发生变化时才落盘
+
+    getter 会反复调用本函数，若每次都无条件写 settings.json，
+    纯读接口也会变成写接口，并在并发下放大写冲突。
+    """
     settings = load_settings()
+    changed = False
     if 'login_required' not in settings:
         settings['login_required'] = True
+        changed = True
     if 'backgrounds' not in settings or not isinstance(settings['backgrounds'], dict):
         settings['backgrounds'] = {}
-    save_settings(settings)
+        changed = True
+    if changed:
+        save_settings(settings)
     return settings
 
 
